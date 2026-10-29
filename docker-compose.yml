@@ -1,7 +1,84 @@
+# Sobe o sistema completo:  docker compose up --build -d
+#
+#   redis            -> broker da fila de ingestao (com AOF: a fila sobrevive a reinicios)
+#   ingestao         -> servico 1, API REST (enfileira documentos, serve indice e vetorizacao)
+#   ingestao-worker  -> servico 1, consumidor da fila (gera embeddings e persiste o indice)
+#   recuperacao      -> servico 2, busca por similaridade + reranking
+#   geracao          -> servico 3, prompt + LLM protegido por circuit breaker
+#
+# Variaveis do LLM (LLM_API_KEY etc.) sao lidas do arquivo .env, se existir.
+# Sem chave, o LLM roda em MODO SIMULADO (offline).
+
+x-saude: &saude
+  interval: 10s
+  timeout: 4s
+  retries: 5
+  start_period: 10s
+
 services:
   redis:
     image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
     ports: ["6379:6379"]
+    volumes: ["redis-dados:/data"]
+    healthcheck:
+      <<: *saude
+      test: ["CMD", "redis-cli", "ping"]
+    restart: unless-stopped
 
-  # TAREFA 4: acrescente aqui os tres servicos (ingestao, recuperacao, geracao)
-  # depois de escrever um Dockerfile para cada um.
+  ingestao:
+    build: { context: ., dockerfile: servicos/ingestao/Dockerfile }
+    image: rag-c2a2/ingestao
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    volumes: ["indice:/dados"]
+    ports: ["8001:8001"]
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  ingestao-worker:
+    build: { context: ., dockerfile: servicos/ingestao/Dockerfile }
+    image: rag-c2a2/ingestao
+    command: ["python", "-m", "servicos.ingestao.worker"]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      INGESTAO_MAX_TENTATIVAS: "3"
+    volumes: ["indice:/dados"]
+    healthcheck: { disable: true }
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  recuperacao:
+    build: { context: ., dockerfile: servicos/recuperacao/Dockerfile }
+    image: rag-c2a2/recuperacao
+    environment:
+      URL_INGESTAO: http://ingestao:8001
+      RERANK_PESO_SIMILARIDADE: "0.7"
+    ports: ["8002:8002"]
+    depends_on:
+      ingestao: { condition: service_healthy }
+    restart: unless-stopped
+
+  geracao:
+    build: { context: ., dockerfile: servicos/geracao/Dockerfile }
+    image: rag-c2a2/geracao
+    environment:
+      URL_RECUPERACAO: http://recuperacao:8002
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_API_URL: ${LLM_API_URL:-https://api.openai.com/v1/chat/completions}
+      LLM_MODELO: ${LLM_MODELO:-gpt-4o-mini}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-8}
+      LLM_TENTATIVAS: ${LLM_TENTATIVAS:-3}
+      LLM_SIMULAR_FALHA: ${LLM_SIMULAR_FALHA:-normal}
+      DISJUNTOR_LIMITE_FALHAS: ${DISJUNTOR_LIMITE_FALHAS:-3}
+      DISJUNTOR_ESPERA_SEGUNDOS: ${DISJUNTOR_ESPERA_SEGUNDOS:-20}
+    ports: ["8003:8003"]
+    depends_on:
+      recuperacao: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  indice:
+  redis-dados:
