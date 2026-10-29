@@ -132,3 +132,11 @@ def test_chave_invalida_nao_e_repetida(sistema, monkeypatch):
     assert resp.status_code == 503
     assert resp.json()["metadados"]["tentativas_llm"] == 1  # 4xx nao e repetido
     assert "401" in resp.json()["motivo"]
+
+
+def test_falha_da_ingestao_e_repassada_pela_recuperacao(sistema):
+    """Recuperacao sem cache e ingestao fora: a geracao explica o motivo real."""
+    sistema.roteador.fora_do_ar.add(app_recuperacao.URL_INGESTAO)
+    resp = sistema.post("/perguntar", json={"pergunta": "teorema CAP"})
+    assert resp.status_code == 503
+    assert "ingestao indisponivel" in resp.json()["detail"]

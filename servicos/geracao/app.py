@@ -77,6 +77,13 @@ def _buscar_trechos(pergunta, top_k):
     try:
         r = com_retentativa(tentativa, tentativas=2, espera_base=0.3,
                             retentar_se=lambda e: not _erro_permanente(e))
+    except requests.HTTPError as erro:
+        # a recuperacao respondeu, mas com 5xx: repassa o motivo dela
+        try:
+            motivo = erro.response.json().get("detail", erro.response.text)
+        except ValueError:
+            motivo = erro.response.text[:200]
+        raise HTTPException(503, detail=f"recuperacao respondeu {erro.response.status_code}: {motivo}")
     except requests.RequestException as erro:
         raise HTTPException(503, detail=f"servico de recuperacao indisponivel: {erro}")
     if r.status_code == 409:

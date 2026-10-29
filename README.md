@@ -161,7 +161,7 @@ retentativa ( circuit breaker ( tempo-limite ( LLM ) ) )
 | Falha | O que acontece |
 |---|---|
 | Recuperação fora do ar | Geração tenta 2 vezes (timeout de conexão 2 s) e responde **503** com mensagem clara. |
-| Ingestão fora do ar | Recuperação tenta 3 vezes; se já tiver o índice em cache, **degrada para busca léxica** (`"modo": "lexico (degradado...)"`) em vez de falhar. Sem cache → 503. |
+| Ingestão fora do ar | Recuperação tenta 3 vezes; se já tiver o índice em cache, **degrada para busca léxica** (`"modo": "lexico (degradado...)"`) em vez de falhar. Sem cache → 503, e a geração repassa o motivo ao cliente. |
 | Redis fora do ar | `POST /indexar` responde 503; consultas continuam funcionando (o índice está em disco); o worker reconecta sozinho com backoff exponencial. |
 | Worker cai no meio de uma tarefa | A mensagem fica em `processando` e é devolvida à fila quando o worker volta. |
 | Contêiner reinicia | O índice persiste no volume `indice` (gravação atômica: arquivo temporário + `os.replace`). |
@@ -303,6 +303,9 @@ python3 scripts/perguntar.py "teorema CAP"
 docker compose start recuperacao
 
 # Derrubar a ingestão: a recuperação degrada para busca léxica com o índice em cache
+# (o cache é preenchido na primeira pergunta; se a recuperação acabou de reiniciar,
+#  faça uma pergunta antes, senão a resposta é 503 "ingestao indisponivel e sem indice em cache")
+python3 scripts/perguntar.py "teorema CAP" > /dev/null
 docker compose stop ingestao
 python3 scripts/perguntar.py "teorema CAP" --json | grep modo_busca
 docker compose start ingestao
