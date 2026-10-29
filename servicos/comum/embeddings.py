@@ -12,13 +12,17 @@ Voce NAO precisa entender a matematica. Precisa saber:
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+from servicos.comum.texto import STOPWORDS
+
 
 class Vetorizador:
 
     def __init__(self):
-        # strip_accents: "particao" e "partição" viram o mesmo termo
+        # strip_accents: "particao" e "partição" viram o mesmo termo;
+        # stop_words: "de", "que", "o"... nao podem gerar similaridade sozinhas
         self._tfidf = TfidfVectorizer(ngram_range=(1, 2), min_df=1,
-                                      strip_accents="unicode")
+                                      strip_accents="unicode",
+                                      stop_words=sorted(STOPWORDS))
         self._ajustado = False
 
     def ajustar(self, textos):
