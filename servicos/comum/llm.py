@@ -14,7 +14,7 @@ import requests
 API_KEY = os.getenv("LLM_API_KEY", "")
 API_URL = os.getenv("LLM_API_URL", "https://api.openai.com/v1/chat/completions")
 MODELO = os.getenv("LLM_MODELO", "gpt-4o-mini")
-TIMEOUT = float(os.getenv("LLM_TIMEOUT", "20"))
+TIMEOUT = float(os.getenv("LLM_TIMEOUT", "8"))
 
 
 def _simulado(pergunta, contexto):
@@ -33,7 +33,8 @@ def gerar(pergunta: str, contexto: list) -> str:
 
     prompt = (
         "Responda a pergunta usando SOMENTE o contexto abaixo. "
-        "Se a resposta nao estiver no contexto, diga que nao sabe.\n\n"
+        "Se a resposta nao estiver no contexto, diga que nao sabe. "
+        "Cite os trechos usados pelo numero entre colchetes, ex.: [1].\n\n"
         f"Contexto:\n{chr(10).join(contexto)}\n\nPergunta: {pergunta}"
     )
     resposta = requests.post(
