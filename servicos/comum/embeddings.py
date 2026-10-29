@@ -16,7 +16,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 class Vetorizador:
 
     def __init__(self):
-        self._tfidf = TfidfVectorizer(ngram_range=(1, 2), min_df=1)
+        # strip_accents: "particao" e "partição" viram o mesmo termo
+        self._tfidf = TfidfVectorizer(ngram_range=(1, 2), min_df=1,
+                                      strip_accents="unicode")
         self._ajustado = False
 
     def ajustar(self, textos):
@@ -28,6 +30,21 @@ class Vetorizador:
         if not self._ajustado:
             raise RuntimeError("chame ajustar() antes de vetorizar()")
         return self._tfidf.transform([texto]).toarray()[0].tolist()
+
+    @property
+    def dimensao(self):
+        return len(self._tfidf.vocabulary_) if self._ajustado else 0
+
+    def vetorizar_esparso(self, texto):
+        """Igual a vetorizar(), mas so com as posicoes nao nulas.
+
+        Devolve (indices, valores). Com TF-IDF quase tudo e zero, entao
+        trafegar so o que importa reduz muito o tamanho das mensagens.
+        """
+        if not self._ajustado:
+            raise RuntimeError("chame ajustar() antes de vetorizar()")
+        linha = self._tfidf.transform([texto]).tocsr()
+        return linha.indices.tolist(), linha.data.tolist()
 
 
 def similaridade(a, b):
