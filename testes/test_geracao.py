@@ -63,7 +63,7 @@ def test_llm_fora_do_ar_retenta_abre_disjuntor_e_degrada(sistema):
     # com o circuito aberto a recusa e imediata, sem tocar no LLM
     resp = sistema.post("/perguntar", json={"pergunta": "eleicao de lider no Raft"})
     assert resp.status_code == 503
-    assert resp.json()["metadados"]["tentativas_llm"] == 1
+    assert resp.json()["metadados"]["tentativas_llm"] == 0
     assert resp.json()["motivo"].startswith("circuito aberto")
     assert app_geracao.disjuntor.status()["total_recusadas"] == 1
 
@@ -102,3 +102,33 @@ def test_avaliacao_detecta_resposta_sem_fundamento():
     ruim = avaliar("teorema CAP", "Bananas amarelas crescem rapidamente em climas tropicais.", contexto)
     assert boa["veredito"] == "fundamentada" and boa["cita_fontes"]
     assert ruim["veredito"] == "pouco fundamentada"
+
+
+def test_api_real_inacessivel_conta_como_falha(sistema, monkeypatch):
+    """Cliente HTTP do kit de verdade, apontando para uma porta sem ninguem."""
+    monkeypatch.setattr(llm, "API_KEY", "chave-de-teste")
+    monkeypatch.setattr(llm, "API_URL", "http://127.0.0.1:9/v1/chat/completions")
+    resp = sistema.post("/perguntar", json={"pergunta": "teorema CAP"})
+    assert resp.status_code == 503
+    assert resp.json()["metadados"]["modo_llm"] == "api"
+    assert resp.json()["metadados"]["tentativas_llm"] == 3
+    assert "ConnectionError" in resp.json()["motivo"]
+
+
+def test_chave_invalida_nao_e_repetida(sistema, monkeypatch):
+    from fastapi import FastAPI, HTTPException
+
+    api_falsa = FastAPI()
+
+    @api_falsa.post("/v1/chat/completions")
+    def recusa():
+        raise HTTPException(401, "chave invalida")
+
+    sistema.roteador.apps["http://llm-falso"] = TestClient(api_falsa)
+    monkeypatch.setattr(llm, "API_KEY", "chave-errada")
+    monkeypatch.setattr(llm, "API_URL", "http://llm-falso/v1/chat/completions")
+    monkeypatch.setattr(llm.requests, "post", lambda url, **kw: sistema.roteador("POST", url, **kw))
+    resp = sistema.post("/perguntar", json={"pergunta": "teorema CAP"})
+    assert resp.status_code == 503
+    assert resp.json()["metadados"]["tentativas_llm"] == 1  # 4xx nao e repetido
+    assert "401" in resp.json()["motivo"]

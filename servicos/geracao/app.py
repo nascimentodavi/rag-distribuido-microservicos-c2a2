@@ -87,10 +87,13 @@ def _buscar_trechos(pergunta, top_k):
 
 
 def _chamar_llm(pergunta, contexto, metricas):
-    def tentativa():
+    def chamada_real():
+        # so conta quando o disjuntor deixa passar (recusa nao chega ao LLM)
         metricas["tentativas_llm"] += 1
-        return disjuntor.chamar(com_tempo_limite, injetor.gerar, llm.TIMEOUT,
-                                pergunta, contexto)
+        return com_tempo_limite(injetor.gerar, llm.TIMEOUT, pergunta, contexto)
+
+    def tentativa():
+        return disjuntor.chamar(chamada_real)
 
     return com_retentativa(
         tentativa, tentativas=LLM_TENTATIVAS, espera_base=0.5,

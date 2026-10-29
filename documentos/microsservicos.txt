@@ -1,0 +1,5 @@
+Microsserviços são um estilo de arquitetura em que a aplicação é dividida em serviços pequenos e independentes, cada um responsável por uma capacidade de negócio e executado em seu próprio processo. Cada serviço pode ser desenvolvido, implantado e escalado separadamente.
+
+Os serviços se comunicam por interfaces bem definidas, de forma síncrona com REST ou gRPC, ou de forma assíncrona com mensageria. A comunicação síncrona é simples, mas acopla a disponibilidade dos serviços: se o serviço chamado cai, quem chamou também falha, a menos que use tempo-limite, retentativa e circuit breaker.
+
+Cada microsserviço deve ser dono dos seus dados, evitando que vários serviços compartilhem o mesmo banco. Contêineres, como os criados com Docker, empacotam o serviço com suas dependências, e ferramentas como Docker Compose e Kubernetes orquestram a execução de vários contêineres. Health checks permitem saber se cada serviço está pronto para receber requisições.

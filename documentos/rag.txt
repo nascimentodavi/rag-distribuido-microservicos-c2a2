@@ -1,0 +1,5 @@
+RAG, sigla de Retrieval-Augmented Generation ou geração aumentada por recuperação, é uma técnica que permite a um modelo de linguagem responder com base em documentos próprios, sem precisar ser retreinado.
+
+O fluxo de um sistema RAG tem três etapas. Na ingestão, os documentos são divididos em trechos e cada trecho é transformado em um vetor numérico chamado embedding, que é guardado em um armazenamento vetorial. Na recuperação, a pergunta do usuário também é transformada em vetor e os trechos mais parecidos são encontrados por similaridade do cosseno. Na geração, os trechos recuperados são colocados no prompt junto com a pergunta e enviados a um LLM, que redige a resposta.
+
+Como a resposta é fundamentada nos trechos recuperados, o modelo inventa menos informações, fenômeno conhecido como alucinação, e é possível citar quais documentos embasaram a resposta. O reranking reordena os trechos candidatos com um critério de relevância mais refinado antes de montar o prompt.

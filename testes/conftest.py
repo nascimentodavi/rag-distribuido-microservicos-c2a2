@@ -8,6 +8,8 @@ from servicos.ingestao import app as app_ingestao
 from servicos.ingestao import fila, worker
 from servicos.ingestao.armazenamento import Armazenamento
 
+_request_original = requests.request  # antes de qualquer monkeypatch
+
 
 def para_requests(resp_httpx, url):
     """Converte a resposta do TestClient (httpx) em requests.Response."""
@@ -33,7 +35,8 @@ class Roteador:
                     raise requests.ConnectionError(f"{base} recusou a conexao")
                 resp = cliente.request(metodo, url[len(base):], **kwargs)
                 return para_requests(resp, url)
-        raise AssertionError(f"URL inesperada: {url}")
+        # fora dos servicos simulados: rede de verdade
+        return _request_original(metodo, url, timeout=timeout, **kwargs)
 
 
 @pytest.fixture

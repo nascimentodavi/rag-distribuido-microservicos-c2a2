@@ -1,0 +1,5 @@
+Mensageria é a comunicação entre serviços por meio de mensagens depositadas em uma fila ou tópico, em vez de chamadas diretas. O produtor publica a mensagem e segue o seu trabalho; o consumidor a processa quando puder. Essa comunicação assíncrona desacopla os serviços no tempo: o produtor não precisa que o consumidor esteja disponível naquele instante.
+
+Filas absorvem picos de carga, porque as mensagens se acumulam e são processadas no ritmo do consumidor. Também aumentam a tolerância a falhas: se o consumidor cair, as mensagens continuam guardadas no broker e são processadas quando ele voltar.
+
+Para não perder mensagens, usa-se confirmação (ack): a mensagem só sai definitivamente da fila depois que o consumidor confirma o processamento. Mensagens que falham repetidas vezes são movidas para uma fila de mensagens mortas, conhecida como dead-letter queue, para análise posterior. Como uma mensagem pode ser entregue mais de uma vez, o processamento deve ser idempotente. Exemplos de brokers são RabbitMQ, Apache Kafka e Redis.

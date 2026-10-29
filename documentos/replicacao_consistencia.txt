@@ -1,0 +1,5 @@
+Replicação é manter cópias dos mesmos dados em vários nós. Ela aumenta a disponibilidade, porque o sistema continua respondendo se um nó cair, e melhora o desempenho de leitura, porque as consultas podem ser distribuídas entre as réplicas.
+
+O desafio da replicação é a consistência. Na consistência forte, toda leitura enxerga a escrita mais recente, como se existisse uma única cópia. Na consistência eventual, as réplicas podem divergir por algum tempo, mas convergem para o mesmo valor se as escritas pararem.
+
+Na replicação líder-seguidor, todas as escritas passam por um líder que as propaga para os seguidores. A replicação síncrona espera a confirmação das réplicas antes de responder e é mais consistente; a assíncrona responde antes e é mais rápida, mas pode perder escritas recentes se o líder falhar. Sistemas baseados em quórum exigem que leituras e escritas sejam confirmadas por uma maioria de nós.
